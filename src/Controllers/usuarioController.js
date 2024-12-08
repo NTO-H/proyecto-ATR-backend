@@ -145,6 +145,46 @@ exports.checkEmail = async (req, res) => {
       .json({ message: "Error en el servidor", error: error.toString() });
   }
 };
+function cleanPhoneNumber(phoneNumber) {
+  // Elimina cualquier prefijo internacional (ejemplo: +52, +1, +34, etc.)
+  let cleanedPhoneNumber = phoneNumber.replace(/^\+?\d{1,4}\s?/g, ""); // Elimina cualquier prefijo de país
+
+  // Elimina todos los caracteres no numéricos (espacios, guiones, paréntesis, etc.)
+  cleanedPhoneNumber = cleanedPhoneNumber.replace(/\D/g, ""); // Elimina todo lo que no sea un número
+
+  return cleanedPhoneNumber;
+}
+
+exports.checkTelefono = async (req, res) => {
+  try {
+    const { telefono } = req.body;
+    const telefonoFormateado = cleanPhoneNumber(telefono);
+
+    // Verifica si el correo ya está registrado
+    console.log(telefonoFormateado);
+    const telefonoDuplicado = await Usuario.findOne({
+      telefono: telefonoFormateado,
+    });
+
+    if (telefonoDuplicado) {
+      // Responde con un mensaje de error si el correo ya existe
+      return res
+        .status(400)
+        .json({ message: "El numero de telefono ya está registrado" });
+    }
+
+    // Respuesta de éxito si el email está disponible
+    return res
+      .status(200)
+      .json({ message: "El numero de telefono está disponible" });
+  } catch (error) {
+    console.error(error);
+    // Responde con un mensaje de error en caso de excepción
+    res
+      .status(500)
+      .json({ message: "Error en el servidor", error: error.toString() });
+  }
+};
 exports.checkCode = async (req, res) => {
   try {
     let code = req.body.code;
@@ -178,6 +218,13 @@ exports.crearUsuario = async (req, res) => {
     const record = await Usuario.findOne({ email: email });
     if (record) {
       return res.status(400).send({ message: "El email ya está registrado" });
+    }
+
+    const telefonoRegistrado = await Usuario.findOne({ telefono: telefono });
+    if (telefonoRegistrado) {
+      return res
+        .status(400)
+        .send({ message: "El teléfono ya está registrado" });
     }
 
     // Encripta la nueva contraseña
@@ -287,6 +334,7 @@ exports.BuscaUsuarioByCorreo = async (req, res) => {
         .status(404)
         .json({ message: "usuario con este correo no encontrado" });
     }
+
     res.json(usuario);
   } catch (error) {
     console.log(error);
